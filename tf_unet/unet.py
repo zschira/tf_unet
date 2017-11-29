@@ -34,11 +34,12 @@ from tf_unet.layers import (weight_variable, weight_variable_devonc, bias_variab
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')
 
-def create_conv_net(x, keep_prob, channels, n_class, layers=3, features_root=16, filter_size=3, pool_size=2, summaries=True):
+def create_conv_net(x, y, keep_prob, x_channels, y_channels, n_class, layers=3, features_root=16, filter_size=3, pool_size=2, summaries=True):
     """
     Creates a new convolutional unet for the given parametrization.
     
-    :param x: input tensor, shape [?,nx,ny,channels]
+    :param x: input tensor, shape [?,nx,ny,x_channels]
+    :param y: second tensor, shape[?,mx,my,y_channels] where mx!=nx ^ my!=ny
     :param keep_prob: dropout probability tensor
     :param channels: number of channels in the input image
     :param n_class: number of output labels
@@ -60,6 +61,12 @@ def create_conv_net(x, keep_prob, channels, n_class, layers=3, features_root=16,
     in_node = x_image
     batch_size = tf.shape(x_image)[0]
  
+    # Placeholder for high res first image
+    mx = tf.shape(x)[1]
+    my = tf.shape(x)[2]
+    y_image = tf.reshape(y, tf.stack([-1,mx,my,y_channels]))
+    
+
     weights = []
     biases = []
     convs = []
@@ -70,6 +77,10 @@ def create_conv_net(x, keep_prob, channels, n_class, layers=3, features_root=16,
     
     in_size = 1000
     size = in_size
+
+    # first layer
+    w0 = weight_variable([])
+
     # down layers
     for layer in range(0, layers):
         features = 2**layer*features_root
@@ -128,6 +139,9 @@ def create_conv_net(x, keep_prob, channels, n_class, layers=3, features_root=16,
         
         size *= 2
         size -= 4
+
+    # Last layer
+
 
     # Output Map
     weight = weight_variable([1, 1, features_root, n_class], stddev)
